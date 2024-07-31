@@ -4,9 +4,9 @@ import speech_recognizer
 import asyncio
 from typing import Optional
 
-
-GUILD_ID = ''
-VOICE_CHANNEL_ID = ''
+TOKEN = ''
+GUILD_ID = '710092876176162896'
+VOICE_CHANNEL_ID = '731904054002843678'
 
 connected = False
 
@@ -81,4 +81,4 @@ async def stop(ctx):
     if ctx.voice_client:
         ctx.voice_client.stop_recording()
         await ctx.send("Recording stopped!")
-bot.run('TOKEN')
+bot.run(TOKEN)

@@ -3,9 +3,9 @@ import asyncio
 import speech_recognizer
 from typing import Optional
 
-
-GUILD_ID = ''
-VOICE_CHANNEL_ID = ''
+TOKEN = ''
+GUILD_ID = '710092876176162896'
+VOICE_CHANNEL_ID = '731904054002843678'
 
 intents = discord.Intents.default()
 intents.guilds = True
@@ -33,4 +33,4 @@ async def on_ready():
     #     # Add code to react to the speech here
     #     await asyncio.sleep(1)
 
-client.run('TOKEN')
+client.run(TOKEN)
