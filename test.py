@@ -3,10 +3,14 @@ from discord.ext import commands
 import speech_recognizer
 import asyncio
 from typing import Optional
+from pydub import AudioSegment
+import io
+import ffmpeg
+import constants
 
-TOKEN = ''
-GUILD_ID = '710092876176162896'
-VOICE_CHANNEL_ID = '731904054002843678'
+TOKEN = constants.BotToken()
+GUILD_ID = constants.Naumberg_GuildID()
+VOICE_CHANNEL_ID = constants.Naumberg_VCID()
 
 connected = False
 
@@ -23,7 +27,7 @@ async def on_ready():
     if guild is None:
         print(f"Guild with ID {GUILD_ID} not found.")
         return
-    voice_channel: Optional[discord.VoiceChannel] = discord.utils.get(guild.voice_channels, id=int(VOICE_CHANNEL_ID))
+    voice_channel: Optional[discord.VoiceChannel] = discord.utils.get(guild.voice_channels, id=int(VOICE_CHANNEL_ID)) # type: ignore
     if voice_channel is None:
         print(f"Voice channel with ID {VOICE_CHANNEL_ID} not found.")
         return
@@ -74,7 +78,13 @@ async def finished_callback(sink, ctx):
     recorded_users = [f"<@{user_id}>" for user_id, audio in sink.audio_data.items()]
     files = None
     files = [discord.File(audio.file, f"{user_id}.{sink.encoding}") for user_id, audio in sink.audio_data.items()]
+
     await ctx.send(f"Finished recording audio for {', '.join(recorded_users)}.", files=files)
+
+    for file in files:
+        transscript = speech_recognizer.recognize_speech_from_DF(file)
+        if transscript != "":
+            await ctx.send(transscript)
 
 @bot.command()
 async def stop(ctx):

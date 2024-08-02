@@ -1,21 +1,40 @@
+import discord
 import speech_recognition as sr
+from pydub import AudioSegment
+import io
+import ffmpeg
 
-def recognize_speech_from_mic():
+def recognize_speech_from_DF(DiscordAudioFile:discord.File):
+    # Initialize recognizer
     recognizer = sr.Recognizer()
-    mic = sr.Microphone()
+
+    DiscordAudioFile.reset()
+
+    # Save the file locally
+    myaudio_segment:AudioSegment = AudioSegment.from_file(io.BytesIO(DiscordAudioFile.fp.read()))
+
+    bytes_audio = io.BytesIO()
+
+    myaudio_segment.export(bytes_audio, format="wav")
+
+    if bytes_audio.getbuffer().nbytes == 0:
+        print("The audio data is empty.")
+        return "The audio data is empty."
+
+    with sr.AudioFile(bytes_audio) as source:
+        audio = recognizer.record(source,5)
     
-    with mic as source:
-        #recognizer.adjust_for_ambient_noise(source)
-        print("started listening")
-        audio = recognizer.listen(source)
-        print("finished listening")
-        
+    if audio.frame_data == b'':
+        print("The audio frame data is empty.")
+        return "The audio frame data is empty."
+
     try:
-        print("started recognizing")
-        transcript = recognizer.recognize_google(audio, language="de-DE")
-        print("finished recognizing")
+        transcript = recognizer.recognize_google(audio, language="de-DE") # type: ignore
+        print("Transcript:", transcript)
         return transcript
-    except sr.RequestError:
-        return "API unavailable"
     except sr.UnknownValueError:
-        return "Unable to recognize speech"
+        print("Google Web Speech API could not understand the audio")
+        return "Google Web Speech API could not understand the audio"
+    except sr.RequestError as e:
+        print(f"Could not request results from Google Web Speech API; {e}")
+        return f"Could not request results from Google Web Speech API; {e}"
