@@ -24,16 +24,16 @@ bot = commands.Bot(command_prefix='#', intents=intents)
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user}')
-    guild= bot.get_guild(int(GUILD_ID))
-    if guild is None:
-        print(f"Guild with ID {GUILD_ID} not found.")
-        return
-    voice_channel: Optional[discord.VoiceChannel] = discord.utils.get(guild.voice_channels, id=int(VOICE_CHANNEL_ID)) # type: ignore
-    if voice_channel is None:
-        print(f"Voice channel with ID {VOICE_CHANNEL_ID} not found.")
-        return
-    
-    vc = await voice_channel.connect()
+    #guild= bot.get_guild(int(GUILD_ID))
+    #if guild is None:
+    #    print(f"Guild with ID {GUILD_ID} not found.")
+    #    return        
+    #voice_channel: Optional[discord.VoiceChannel] = discord.utils.get(guild.voice_channels, id=int(VOICE_CHANNEL_ID)) # type: ignore
+    #if voice_channel is None:
+    #    print(f"Voice channel with ID {VOICE_CHANNEL_ID} not found.")
+    #    return
+    #
+    #vc = await voice_channel.connect()
 
 @bot.event
 async def on_voice_state_update(member, before, after):
@@ -74,6 +74,11 @@ async def record(ctx):
     if ctx.voice_client:
         ctx.voice_client.start_recording(discord.sinks.WaveSink(), finished_callback, ctx)
         await ctx.send("Recording started!")
+
+@bot.command()
+async def messages(ctx):
+    if ctx is not None:
+        await ctx.send("sure")
 
 async def finished_callback(sink, ctx):
     recorded_users = [f"<@{user_id}>" for user_id, audio in sink.audio_data.items()]
