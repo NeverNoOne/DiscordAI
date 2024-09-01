@@ -1,16 +1,11 @@
 from discord.abc import Connectable
-import websockets
-import json
-import asyncio
 import constants
 import select
 import discord
 import threading
-import struct
 import wave
-import io
 import time
-import gc
+from speech_recognizer import recognize_speech_from_bytes, recognize_speech_from_wav
 from discord import utils
 from discord.gateway import DiscordWebSocket, DiscordVoiceWebSocket
 from discord.voice_client import VoiceClient
@@ -45,6 +40,7 @@ class CustomVoiceClient(VoiceClient):
         self.listening = False
         self.decoded_audio_bytes:bytes = b''
         self.custom_decoder = discord.opus.Decoder()
+        self.wait_interval = 0
 
     async def connect_websocket(self) -> DiscordVoiceWebSocket:
         ws = await CustomDiscordVoiceWebSocket.from_client(self)
@@ -53,6 +49,7 @@ class CustomVoiceClient(VoiceClient):
 
     def recv_audio_data(self):
         if self.socket:
+            
             while self.listening:
                 ready, _, err = select.select([self.socket], [], [self.socket], 0.01)
                 if not ready:
@@ -65,15 +62,23 @@ class CustomVoiceClient(VoiceClient):
                     self.listening = False
                     print(ex)
                     continue
-                #print(data)
                 self.process_audio(data)
-            print('writing wave file...')
-            with wave.open('test.wav', 'wb') as f:
-                f.setnchannels(self.custom_decoder.CHANNELS)
-                f.setsampwidth(2)
-                f.setframerate(48000)
-                f.writeframes(self.decoded_audio_bytes)
-            print('wave file written and saved')
+                if self.wait_interval > 5 and self.decoded_audio_bytes != b'':
+                    print('stopped speaking')
+                    print('recognizing speech...')
+                    stt = recognize_speech_from_bytes(self.decoded_audio_bytes)
+                    print(stt)
+                    self.decoded_audio_bytes = b''
+                    
+            #print('writing wave file...')
+            #with wave.open('test.wav', 'wb') as f:
+            #    f.setnchannels(self.custom_decoder.CHANNELS)
+            #    f.setsampwidth(2)
+            #    f.setframerate(48000)
+            #    f.writeframes(self.decoded_audio_bytes)
+            #print('wave file written and saved')
+            
+            
 
     def process_audio(self, data):
         if 200 <= data[1] <= 204:
@@ -81,9 +86,10 @@ class CustomVoiceClient(VoiceClient):
             # RTCP provides information about the connection
             # as opposed to actual audio data, so it's not
             # important at the moment.
-            print('not important')
+            self.wait_interval += 1
+            #print('not important')
             return
-
+        self.wait_interval = 0
         RawAudioData = discord.sinks.RawData(data, self)
 
         if RawAudioData.decrypted_data == b"\xf8\xff\xfe":  # Frame of silence
