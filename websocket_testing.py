@@ -7,10 +7,15 @@ import select
 import discord
 import threading
 import struct
-from discord import utils, opus
+import wave
+import io
+import time
+import gc
+from discord import utils
 from discord.gateway import DiscordWebSocket, DiscordVoiceWebSocket
 from discord.voice_client import VoiceClient
 from discord.ext import commands
+import discord.opus
 
 GATEWAY = "wss://gateway.discord.gg/?v=10&encoding=json"
 TOKEN = constants.BotToken()
@@ -38,6 +43,8 @@ class CustomVoiceClient(VoiceClient):
     def __init__(self, client: discord.Client, channel: Connectable):
         super().__init__(client, channel)
         self.listening = False
+        self.decoded_audio_bytes:bytes = b''
+        self.custom_decoder = discord.opus.Decoder()
 
     async def connect_websocket(self) -> DiscordVoiceWebSocket:
         ws = await CustomDiscordVoiceWebSocket.from_client(self)
@@ -46,7 +53,6 @@ class CustomVoiceClient(VoiceClient):
 
     def recv_audio_data(self):
         if self.socket:
-            total_data:bytes = b''
             while self.listening:
                 ready, _, err = select.select([self.socket], [], [self.socket], 0.01)
                 if not ready:
@@ -55,15 +61,19 @@ class CustomVoiceClient(VoiceClient):
 
                 try:
                     data = self.socket.recv(4096)
-                    if data:
-                        total_data += data
                 except OSError as ex:
                     self.listening = False
                     print(ex)
                     continue
                 #print(data)
                 self.process_audio(data)
-            print(f'complete Bytes: {total_data}')
+            print('writing wave file...')
+            with wave.open('test.wav', 'wb') as f:
+                f.setnchannels(self.custom_decoder.CHANNELS)
+                f.setsampwidth(2)
+                f.setframerate(48000)
+                f.writeframes(self.decoded_audio_bytes)
+            print('wave file written and saved')
 
     def process_audio(self, data):
         if 200 <= data[1] <= 204:
@@ -73,15 +83,18 @@ class CustomVoiceClient(VoiceClient):
             # important at the moment.
             print('not important')
             return
-        data = discord.sinks.RawData(data, self)
 
-        if data.decrypted_data == b"\xf8\xff\xfe":  # Frame of silence
+        RawAudioData = discord.sinks.RawData(data, self)
+
+        if RawAudioData.decrypted_data == b"\xf8\xff\xfe":  # Frame of silence
             return
-        
-        decoder = opus.Decoder()
 
-        print(decoder.decode(data))
-        
+        try:
+            decoded_audio = self.custom_decoder.decode(RawAudioData.decrypted_data)
+
+            self.decoded_audio_bytes += decoded_audio
+        except Exception as e:
+            print(f'Error decoding audio: {e}')
 
     def start_listening(self):
         self.listening = True
@@ -169,7 +182,7 @@ async def stop(ctx):
 
 @client.command()
 async def hello(ctx):
-    ctx.send('hello')
+    await ctx.send('hello')
 
 #commands:list[discord.ApplicationCommand] = [discord.ApplicationCommand(stop)]
 
