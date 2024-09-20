@@ -69,7 +69,7 @@ class CustomVoiceClient(VoiceClient):
                     stt = recognize_speech_from_bytes(self.decoded_audio_bytes)
                     print(stt)
                     self.decoded_audio_bytes = b''
-                    
+
             #print('writing wave file...')
             #with wave.open('test.wav', 'wb') as f:
             #    f.setnchannels(self.custom_decoder.CHANNELS)
@@ -164,10 +164,10 @@ client = CustomBot(command_prefix='!', intents=intents, auto_sync_commands=True)
 async def on_ready():
     print(f'Logged in as {client.user}')
     
-    guild = client.get_guild(int(constants.Test_GuildID()))
+    guild = client.get_guild(int(constants.Naumberg_GuildID()))
     if guild is None: return
     for channel in guild.voice_channels:
-        if channel.id == int(constants.Test_VCID()):
+        if channel.id == int(constants.Naumberg_VCID()):
             vc = await channel.connect(cls=CustomVoiceClient)
             vc.start_listening()
 
