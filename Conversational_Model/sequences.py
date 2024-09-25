@@ -69,6 +69,7 @@ def GetSequences(PATH):
 
 
 def GetSequences_max(PATH:str, max_size:int):
+    lentries = []
     entries = [[]]
 
     with open(PATH, 'r') as f:
@@ -93,38 +94,56 @@ def GetSequences_max(PATH:str, max_size:int):
         # ...
     ]
     data = entries
-    
 
-    # Clean the dataset
-    for i in range(len(data)):
-        data[i][1] = clean_text(data[i][1])  # Clean input text
-        data[i][2] = clean_text(data[i][2])  # Clean target text
+    while len(data) != 0:
+        tmpentries = [[]].pop(0)
+        
+        while len(tmpentries) < max_size and len(data) != 0:
+            tmpentries.append(data.pop(0))
+        lentries.append(tmpentries)
 
-    # Extract input (user) and target (bot) messages
-    input_texts = [item[1] for item in data]
-    target_texts = ['<START> ' + item[2] + ' <END>' for item in data]
+    loutput = []
+    for e in lentries:
+        # Clean the dataset
+        for i in range(len(e)):
+            e[i][1] = clean_text(e[i][1])  # Clean input text
+            e[i][2] = clean_text(e[i][2])  # Clean target text
 
-    # 2. Tokenization using Keras
-    tokenizer = Tokenizer(filters='', lower=True, oov_token="<OOV>")  # Keeps punctuation for better meaning
-    tokenizer.fit_on_texts(input_texts + target_texts)
+        # Extract input (user) and target (bot) messages
+        input_texts = [item[1] for item in e]
+        target_texts = ['<START> ' + item[2] + ' <END>' for item in e]
 
-    # Convert texts to sequences
-    input_sequences = tokenizer.texts_to_sequences(input_texts)
-    target_sequences = tokenizer.texts_to_sequences(target_texts)
+        # 2. Tokenization using Keras
+        tokenizer = Tokenizer(filters='', lower=True, oov_token="<OOV>")  # Keeps punctuation for better meaning
+        tokenizer.fit_on_texts(input_texts + target_texts)
 
-    # 3. Padding: Ensure all sequences are the same length
-    max_sequence_length = max(max(len(seq) for seq in input_sequences),
-                              max(len(seq) for seq in target_sequences))
+        # Convert texts to sequences
+        input_sequences = tokenizer.texts_to_sequences(input_texts)
+        target_sequences = tokenizer.texts_to_sequences(target_texts)
 
-    input_sequences = pad_sequences(input_sequences, maxlen=max_sequence_length, padding='post')
-    target_sequences = pad_sequences(target_sequences, maxlen=max_sequence_length, padding='post')
+        # 3. Padding: Ensure all sequences are the same length
+        max_sequence_length = max(max(len(seq) for seq in input_sequences),
+                                  max(len(seq) for seq in target_sequences))
 
-    # 4. Tokenizer Information
-    vocab_size = len(tokenizer.word_index) + 1  # +1 for padding token
-    word_index = tokenizer.word_index  # Dictionary mapping words to their index
+        input_sequences = pad_sequences(input_sequences, maxlen=max_sequence_length, padding='post')
+        target_sequences = pad_sequences(target_sequences, maxlen=max_sequence_length, padding='post')
 
-    # 5. Print formatted input/output sequences
-    print("Sample Input Sequences:", input_sequences[:2])
-    print("Sample Target Sequences:", target_sequences[:2])
-    print("Vocabulary Size:", vocab_size)
-    return input_sequences, target_sequences, vocab_size, word_index
+        # 4. Tokenizer Information
+        vocab_size = len(tokenizer.word_index) + 1  # +1 for padding token
+        word_index = tokenizer.word_index  # Dictionary mapping words to their index
+
+        # 5. Print formatted input/output sequences
+        #print("Sample Input Sequences:", input_sequences[:2])
+        #print("Sample Target Sequences:", target_sequences[:2])
+        #print("Vocabulary Size:", vocab_size)
+        loutput.append([input_sequences, target_sequences, vocab_size, word_index])
+    return loutput
+
+
+def GetSequences_random(PATH:str, max_size:int):
+    import random
+    l = GetSequences_max(PATH, max_size)
+    r = random.randint(0,len(l)-1)
+    return l[r]
+
+#GetSequences_max("M:/AI_DataSets/cornell_movie_dialog/corpus.csv", 25000)

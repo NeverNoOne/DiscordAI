@@ -40,12 +40,14 @@ def collate_fn(batch):
         'input': input_batch_padded,
         'target': target_batch_padded
     }
-from sequences import GetSequences
+from sequences import GetSequences, GetSequences_max, GetSequences_random
 
 # Assuming input_sequences and target_sequences are lists of tokenized sequences
 input_sequences = [...]  # List of tokenized input sequences
 target_sequences = [...]  # List of tokenized target sequences
-input_sequences, target_sequences, vocab_size, word_index = GetSequences(DATASET_PATH)
+#input_sequences, target_sequences, vocab_size, word_index = GetSequences(DATASET_PATH)
+
+input_sequences, target_sequences, vocab_size, word_index = GetSequences_random(DATASET_PATH, 10000)
 
 import os
 import json
@@ -67,13 +69,13 @@ chat_dataset = ChatDataset(input_sequences, target_sequences)
 # Create the DataLoader
 train_loader = DataLoader(
     dataset=chat_dataset,
-    batch_size=64,        # Set the batch size
+    batch_size=32,        # Set the batch size
     shuffle=True,         # Shuffle the dataset
     collate_fn=collate_fn # Handle padding within each batch
 )
 
 #vocab_size = 10000
-model, device = m.getModel(vocab_size=vocab_size, num_layers=4)
+model, device = m.getModel(vocab_size=vocab_size, num_layers=2)
 print(f"Model loaded with device {device}")
 
 criterion = nn.CrossEntropyLoss()  #(ignore_index=pad_token)  # Assuming you have a padding token
