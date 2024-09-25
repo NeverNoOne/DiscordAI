@@ -1,6 +1,9 @@
 > [!IMPORTANT]
 > !!! LEARNING PROJECT !!!
 
+> [!NOTE]
+> the models parameter like layer and batch_size should be carefully chosen in order to not get any OutOfMemory exceptions!
+
 # DiscordAI
 DiscordAI is a work in progress python application, whose goal is to chill in a vc and talk with the vc members (small talk).
 
