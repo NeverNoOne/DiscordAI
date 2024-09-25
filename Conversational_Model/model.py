@@ -6,6 +6,17 @@ from sequences import clean_text
 
 class ChatbotModel(nn.Module):
     def __init__(self, vocab_size, embed_size, hidden_size, output_size, num_layers, device):
+        """
+        Initializes the ChatbotModel with embedding, encoder, attention, and decoder layers.
+        
+        Args:
+            vocab_size (int): Size of the vocabulary.
+            embed_size (int): Dimension of the embedding vectors.
+            hidden_size (int): Number of features in the hidden state of the LSTM.
+            output_size (int): Size of the output vocabulary.
+            num_layers (int): Number of recurrent layers in the LSTM.
+            device (torch.device): Device to run the model on (CPU or GPU).
+        """
         super(ChatbotModel, self).__init__()
         
         # Embedding layer
@@ -21,6 +32,7 @@ class ChatbotModel(nn.Module):
         self.decoder = Decoder(embed_size, hidden_size, output_size, num_layers, self.attention)
         
         self.device = device
+        self.max_length = 200  # Maximum length of the output sequence
 
     def forward(self, input_seq, target_seq):
         # Embedding the input sequence
@@ -36,6 +48,48 @@ class ChatbotModel(nn.Module):
         output, _, _ = self.decoder(embedded_target, hidden, cell, encoder_outputs)
         
         return output
+    
+    def predict(self, input_text, tokenizer, vocab_size, sos_token_idx:str, eos_token_idx:str):
+        sos_token_idx = tokenizer.word_index[sos_token_idx.lower()]
+
+        eos_token_idx = tokenizer.word_index[eos_token_idx.lower()]
+        # Preprocess and tokenize the input text
+        input_seq = tokenizer.texts_to_sequences([input_text])
+        input_seq = pad_sequences(input_seq, maxlen=self.max_length, padding='post')
+        input_seq = torch.LongTensor(input_seq).to(self.device)
+        
+        # Encode the input sequence
+        embedded_input = self.embedding(input_seq)
+        encoder_outputs, hidden, cell = self.encoder(embedded_input)
+        
+        # Start the decoding with the start-of-sequence token
+        decoder_input = torch.LongTensor([[sos_token_idx]]).to(self.device)
+        
+        decoded_tokens = []
+        for _ in range(self.max_length):
+            # Embed the decoder input
+            embedded_input = self.embedding(decoder_input)
+            
+            # Decode the token with attention
+            output, hidden, cell = self.decoder(embedded_input, hidden, cell, encoder_outputs)
+            
+            # Get the token with the highest probability
+            predicted_token = output.argmax(2).item()
+            
+            # Append the token to the result
+            decoded_tokens.append(predicted_token)
+            
+            # If the model predicts the end-of-sequence token, stop decoding
+            if predicted_token == eos_token_idx:
+                break
+            
+            # Prepare the next input to the decoder (previous prediction)
+            decoder_input = torch.LongTensor([[predicted_token]]).to(self.device)
+        
+        # Convert tokens back to words
+        predicted_words = [tokenizer.index_word[token] for token in decoded_tokens if token in tokenizer.index_word]
+        
+        return ' '.join(predicted_words)
 
 class Encoder(nn.Module):
     def __init__(self, embed_size, hidden_size, num_layers):
@@ -108,30 +162,6 @@ class Decoder(nn.Module):
         
         return output, hidden, cell
 
-
-## Example usage:
-#device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-#
-## Define hyperparameters
-#vocab_size = 10000  # Size of your vocabulary
-#embed_size = 300    # Embedding size
-#hidden_size = 512   # LSTM hidden size
-#output_size = vocab_size  # Output size, which is the same as vocab size
-#num_layers = 2      # Number of LSTM layers
-#
-## Initialize the model
-#model = ChatbotModel(vocab_size, embed_size, hidden_size, output_size, num_layers, device).to(device)
-#
-## Example input and target sequences
-#input_seq = torch.randint(0, vocab_size, (32, 10)).to(device)  # Batch of 32 sequences, each 10 tokens long
-#target_seq = torch.randint(0, vocab_size, (32, 10)).to(device)
-#
-## Forward pass
-#output = model(input_seq, target_seq)
-#
-#print(output.shape)  # Output shape should be (batch_size, seq_len, vocab_size)
-
-
 def getModel(
         # Define hyperparameters
         vocab_size = 10000  # Size of your vocabulary
@@ -141,6 +171,7 @@ def getModel(
         ,num_layers = 2      # Number of LSTM layers
 ):
     # Example usage:
+    output_size = vocab_size
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(device)
     

@@ -5,8 +5,9 @@ import constants
 TOKEN = constants.BotToken()
 GUILD_ID = constants.Naumberg_GuildID()
 VOICE_CHANNEL_ID = constants.Naumberg_VCID()
-TEXTCHANNEL_ID = ""
+TEXTCHANNEL_ID = "710092876176162900"
 USER_ID = ""
+FILE_PATH = "M:/AI_DataSets/Discord/Naumberg/dies_das.txt"
 
 connected = False
 
@@ -27,15 +28,15 @@ async def on_ready():
                 print("channel found!")
                 messages = [message async for message in channel.history(limit=20000)]
                 #print(messages.__len__())
-                with open('history.txt', 'w', encoding='utf-8') as f:
+                with open(FILE_PATH, 'w', encoding='utf-8') as f:
                     counter = 0
                     for m in messages:
                         try:
                             if m.author.bot:
                                 continue
-                            if not m.content.startswith('http') and m.author.id == int(USER_ID):
+                            if not m.content.startswith('http'): #and m.author.id == int(USER_ID):
                                 counter +=1
-                                f.write(f"<s>{m.content}<e>\n")
+                                f.write(f"{m.created_at},{m.author.name},{len(m.attachments)>0},<START> {m.content} <END>\n")
                         except:
                             print(f"error at {m.content}")
                     print(f"finished - found: {counter}")
