@@ -1,7 +1,7 @@
 import torch
 from model import ChatbotModel, getModel
 
-VOCAB_PATH = "M:/AI_Vocab/vocab_discord.json"
+VOCAB_PATH = "M:/AI_Vocab/vocab_full.json"
 
 import os
 import json
@@ -16,13 +16,15 @@ else:
     print("Couldn't find a vocab!")
     exit()
 
-model, device = getModel(vocab_size=vocab_size, num_layers=4)
-model.load_state_dict(torch.load("M:/AI_Models/model_discord.pt", weights_only=True))
+model, device = getModel(vocab_size=vocab_size, embed_size=150, hidden_size=256, num_layers=2)
+model.load_state_dict(torch.load("M:/AI_Models/model_full.pt", weights_only=True))
 model.eval()
 from keras_preprocessing.text import Tokenizer
 input_text = "Hello"
 tokenizer = Tokenizer(filters='', lower=True, oov_token="<OOV>")  # Keeps punctuation for better meaning
 tokenizer.word_index = vocab
+#TODO RuntimeWarning: assigning None to unbound local 'index'
+#TODO for some reason the output is always the same?????
 tokenizer.index_word = {index: word for word, index in vocab.items()}
 output = model.predict(input_text, tokenizer, vocab_size, "<START>", "<END>")
 print(output)

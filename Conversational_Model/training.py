@@ -45,9 +45,9 @@ from sequences import GetSequences, GetSequences_max, GetSequences_random
 # Assuming input_sequences and target_sequences are lists of tokenized sequences
 input_sequences = [...]  # List of tokenized input sequences
 target_sequences = [...]  # List of tokenized target sequences
-#input_sequences, target_sequences, vocab_size, word_index = GetSequences(DATASET_PATH)
-
 input_sequences, target_sequences, vocab_size, word_index = GetSequences_random(DATASET_PATH, 10000)
+
+#input_sequences, target_sequences, vocab_size, word_index = GetSequences_random(DATASET_PATH, 5000)
 
 import os
 import json
@@ -69,37 +69,52 @@ chat_dataset = ChatDataset(input_sequences, target_sequences)
 # Create the DataLoader
 train_loader = DataLoader(
     dataset=chat_dataset,
-    batch_size=32,        # Set the batch size
+    batch_size=16,        # Set the batch size
     shuffle=True,         # Shuffle the dataset
-    collate_fn=collate_fn # Handle padding within each batch
+    collate_fn=collate_fn # Handle padding within each batch,
 )
 
 #vocab_size = 10000
-model, device = m.getModel(vocab_size=vocab_size, num_layers=2)
+model, device = m.getModel(vocab_size=vocab_size, embed_size=150, hidden_size=256, num_layers=2)
 print(f"Model loaded with device {device}")
 
 criterion = nn.CrossEntropyLoss()  #(ignore_index=pad_token)  # Assuming you have a padding token
 optimizer = torch.optim.AdamW(model.parameters(), lr=0.001) # type: ignore
 
-num_epochs = 50
+num_epochs = 10
 
+import time 
+from torch import autocast, GradScaler
+scaler = GradScaler()
+#TODO how to handle the vocab (extending)
+#TODO optimizing for large datasets
 for epoch in range(num_epochs):
     model.train()
-    
+    bcount = 0
+    total_loss = 0
+    begin = time.time()
     for batch in train_loader:
+        bcount += 1
         input_seq = batch['input'].to(device)
         target_seq = batch['target'].to(device)
         
-        # Forward pass and loss calculation
-        output = model(input_seq, target_seq[:, :-1])  # Exclude <EOS> token from target input
-        loss = criterion(output.view(-1, vocab_size), target_seq[:, 1:].reshape(-1))  # Target starts from the next token
+        with autocast(device.type):
+            # Forward pass and loss calculation
+            output = model(input_seq, target_seq[:, :-1])  # Exclude <EOS> token from target input
+            loss = criterion(output.view(-1, vocab_size), target_seq[:, 1:].reshape(-1))  # Target starts from the next token
         
         # Backward pass and optimization
+        #optimizer.zero_grad()
+        #loss.backward()
+        #optimizer.step()
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
+        scaler.update()
         optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-    if epoch % 5 == 0:
-        print(f'Epoch [{epoch}/{num_epochs}], Loss: {loss.item():.4f}')
+        total_loss += loss.item()
+        if bcount % 10 == 0: print(f"finished batch: {bcount} took: {time.time()-begin}"); begin = time.time()
+    #if epoch % 5 == 0:
+    print(f'Epoch [{epoch+1}/{num_epochs}], Average Loss: {total_loss / len(train_loader):.4f}')
     
 
 torch.save(model.state_dict(), MODEL_PATH)
