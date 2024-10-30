@@ -103,6 +103,10 @@ class CustomVoiceClient(VoiceClient):
             print(f'Error decoding audio: {e}')
 
     def start_listening(self):
+        if self.listening:
+            print("already listening")
+            return
+
         self.listening = True
         t = threading.Thread(
             target=self.recv_audio_data
@@ -113,6 +117,8 @@ class CustomVoiceClient(VoiceClient):
     def stop_listening(self):
         if self.listening:
             self.listening = False
+        else:
+            print("not listening")
 
 class CustomDiscordWebSocket(DiscordWebSocket):
     async def received_message(self, msg):
