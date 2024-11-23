@@ -1,5 +1,6 @@
 > [!IMPORTANT]
 > !!! LEARNING PROJECT !!!
+> DO NOT USE! NOT UPDATED TO LAST DISCORD.PY VERSION!
 
 > [!NOTE]
 > the models parameter like layer and batch_size should be carefully chosen in order to not get any OutOfMemory exceptions!
